@@ -15,33 +15,40 @@ jobs:
       - name: Repoyu klonla
         uses: actions/checkout@v4
 
-      - name: Python ve Bağımlılıkları Kur
-        run: |
-          python -m pip install --upgrade pip
-          pip install Pillow
+      - name: .NET SDK Kur
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
-      - name: Stardew Valley TBIN -> TMX Dönüştürücüyü İndir
+      - name: TBIN Dönüştürücü Betiğini Çalıştır
         run: |
-          git clone https://github.com/Platypus/tbin.git tbin_lib || true
+          cat << 'EOF' > convert.py
+          import urllib.request
+          import os, glob
 
-      - name: Python Betiği ile Dönüştür
-        run: |
-          python -c "
-          import os, glob, sys
-          sys.path.append('tbin_lib')
+          # Platypus tbin dönüştürücü aracını doğrudan indirip çalıştırıyoruz
+          url = "https://raw.githubusercontent.com/Platypus/tbin/master/tbin.py"
           try:
-              from tbin import TbinMap
-              for file in glob.glob('*.tbin'):
-                  print(f'Islem yapiliyor: {file}')
-                  m = TbinMap.from_file(file)
-                  out_name = file.rsplit('.', 1)[0] + '.tmx'
-                  m.to_tmx(out_name)
-                  print(f'Basariyla olusturuldu: {out_name}')
+              urllib.request.urlretrieve(url, "tbin_core.py")
+              print("Çekirdek dönüştürücü indirildi.")
           except Exception as e:
-              print(f'Hata olustu: {e}')
-          "
+              print(f"İndirme hatası: {e}")
 
-      - name: Dizin İçeriğini Göster (Hata Ayıklama)
+          import tbin_core
+
+          for file in glob.glob("*.tbin"):
+              try:
+                  print(f"İşleniyor: {file}")
+                  m = tbin_core.TbinMap.from_file(file)
+                  out = file.rsplit('.', 1)[0] + '.tmx'
+                  m.to_tmx(out)
+                  print(f"BAŞARILI: {out} oluşturuldu!")
+              except Exception as e:
+                  print(f"HATA ({file}): {e}")
+          EOF
+          python3 convert.py
+
+      - name: Dizin Kontrolü ve Log
         run: |
           echo "=== KLASÖRDEKİ DOSYALAR ==="
           ls -la
@@ -64,5 +71,6 @@ jobs:
             git push
           else
             echo "TMX dosyası üretilemedi."
+            exit 1
           fi
           
