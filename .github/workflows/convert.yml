@@ -1,0 +1,41 @@
+name: TBIN to TMX Converter
+
+on:
+  push:
+    paths:
+      - '**.tbin'
+  workflow_dispatch:
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repoyu klonla
+        uses: actions/checkout@v4
+
+      - name: Python Kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Dönüştürücü Kütüphaneyi Yükle
+        run: |
+          pip install tbin2tmx
+
+      - name: Dosyaları Dönüştür
+        run: |
+          for file in *.tbin; do
+            if [ -f "$file" ]; then
+              tbin2tmx "$file" "${file%.tbin}.tmx"
+            fi
+          done
+
+      - name: Dönüştürülen TMX Dosyalarını Repoya Kaydet
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add *.tmx
+          git commit -m "TBIN dosyaları TMX formatına dönüştürüldü" || exit 0
+          git push
+          
