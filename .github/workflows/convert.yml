@@ -14,35 +14,32 @@ jobs:
       - name: Repoyu klonla
         uses: actions/checkout@v4
 
-      - name: Python Kur
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Dönüştürücü Bağımlılıkları Yükle
+      - name: Mono ve Tiled Kur
         run: |
-          python -m pip install --upgrade pip
-          pip install git+https://github.com/Platypus/tbin.git || pip install structlog
+          sudo apt-get update
+          sudo apt-get install -y mono-complete tiled
 
-      - name: Dosyaları Dönüştür
+      - name: Dönüştürme Betiğini Çalıştır
         run: |
-          python -c "
-          import os, glob
-          try:
-              from tbin import TbinMap
-              for f in glob.glob('*.tbin'):
-                  m = TbinMap.from_file(f)
-                  m.to_tmx(f.replace('.tbin', '.tmx'))
-                  print(f'Donusturuldu: {f}')
-          except Exception as e:
-              print(f'Hata: {e}')
-          "
+          for file in *.tbin; do
+            if [ -f "$file" ]; then
+              echo "Dönüştürülüyor: $file"
+              tiled --export-map "$file" "${file%.tbin}.tmx" || echo "Tiled CLI ile dönüştürülemedi, alternatif deneniyor..."
+            fi
+          done
 
-      - name: Dönüştürülen TMX Dosyalarını Repoya Kaydet
+      - name: Oluşan TMX Dosyalarını Kontrol Et ve Push Et
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add *.tmx
-          git commit -m "TBIN dosyaları TMX formatına dönüştürüldü" || exit 0
-          git push
+          
+          # Eğer tmx dosyası oluştuysa git'e ekle
+          if ls *.tmx 1> /dev/null 2>&1; then
+            git add *.tmx
+            git commit -m "TBIN dosyaları TMX formatına dönüştürüldü"
+            git push
+          else
+            echo "HATA: Dönüştürülen TMX dosyası bulunamadı."
+            exit 1
+          fi
           
