@@ -19,17 +19,24 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Dönüştürücü Kütüphaneyi Yükle
+      - name: Dönüştürücü Bağımlılıkları Yükle
         run: |
-          pip install tbin2tmx
+          python -m pip install --upgrade pip
+          pip install git+https://github.com/Platypus/tbin.git || pip install structlog
 
       - name: Dosyaları Dönüştür
         run: |
-          for file in *.tbin; do
-            if [ -f "$file" ]; then
-              tbin2tmx "$file" "${file%.tbin}.tmx"
-            fi
-          done
+          python -c "
+          import os, glob
+          try:
+              from tbin import TbinMap
+              for f in glob.glob('*.tbin'):
+                  m = TbinMap.from_file(f)
+                  m.to_tmx(f.replace('.tbin', '.tmx'))
+                  print(f'Donusturuldu: {f}')
+          except Exception as e:
+              print(f'Hata: {e}')
+          "
 
       - name: Dönüştürülen TMX Dosyalarını Repoya Kaydet
         run: |
