@@ -15,27 +15,38 @@ jobs:
       - name: Repoyu klonla
         uses: actions/checkout@v4
 
-      - name: Paketleri Kur
+      - name: Python ve Bağımlılıkları Kur
         run: |
-          sudo apt-get update
-          sudo apt-get install -y tiled xvfb libgl1 libglx-mesa0
+          python -m pip install --upgrade pip
+          pip install Pillow
 
-      - name: Tiled ile TBIN -> TMX Dönüştürme
+      - name: Stardew Valley TBIN -> TMX Dönüştürücüyü İndir
         run: |
-          for file in *.tbin; do
-            if [ -f "$file" ]; then
-              out="${file%.tbin}.tmx"
-              echo "Dönüştürülüyor: $file -> $out"
-              xvfb-run -a tiled --export-map "$file" "$out" || true
-            fi
-          done
+          git clone https://github.com/Platypus/tbin.git tbin_lib || true
 
-      - name: Log ve Oluşan Dosyaları Listele
+      - name: Python Betiği ile Dönüştür
         run: |
-          echo "Dizindeki Dosyalar:"
+          python -c "
+          import os, glob, sys
+          sys.path.append('tbin_lib')
+          try:
+              from tbin import TbinMap
+              for file in glob.glob('*.tbin'):
+                  print(f'Islem yapiliyor: {file}')
+                  m = TbinMap.from_file(file)
+                  out_name = file.rsplit('.', 1)[0] + '.tmx'
+                  m.to_tmx(out_name)
+                  print(f'Basariyla olusturuldu: {out_name}')
+          except Exception as e:
+              print(f'Hata olustu: {e}')
+          "
+
+      - name: Dizin İçeriğini Göster (Hata Ayıklama)
+        run: |
+          echo "=== KLASÖRDEKİ DOSYALAR ==="
           ls -la
 
-      - name: TMX Dosyalarını Artifact Olarak Yükle (İndirilebilir Yap)
+      - name: TMX Dosyalarını Artifact Olarak Yükle
         uses: actions/upload-artifact@v4
         with:
           name: tmx-files
@@ -52,6 +63,6 @@ jobs:
             git commit -m "Otomatik TBIN -> TMX dönüştürme" || exit 0
             git push
           else
-            echo "UYARI: Dönüştürülen TMX dosyası bulunamadı."
+            echo "TMX dosyası üretilemedi."
           fi
           
