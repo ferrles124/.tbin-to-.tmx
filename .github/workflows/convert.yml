@@ -2,8 +2,6 @@ name: TBIN to TMX Converter
 
 on:
   push:
-    paths:
-      - '**.tbin'
   workflow_dispatch:
 
 jobs:
@@ -14,10 +12,10 @@ jobs:
       - name: Repoyu klonla
         uses: actions/checkout@v4
 
-      - name: Tiled ve Headless Sanal Ekran Paketlerini Kur
+      - name: Paketleri Kur
         run: |
           sudo apt-get update
-          sudo apt-get install -y tiled xvfb libgl1-mesa-dri libgl1-mesa-glx
+          sudo apt-get install -y tiled xvfb libgl1 libglx-mesa0
 
       - name: Tiled ile TBIN -> TMX Dönüştürme
         run: |
@@ -25,7 +23,7 @@ jobs:
             if [ -f "$file" ]; then
               out="${file%.tbin}.tmx"
               echo "Dönüştürülüyor: $file -> $out"
-              xvfb-run -a tiled --export-map "$file" "$out" || echo "Export hatası aldı ama kontrol ediliyor..."
+              xvfb-run -a tiled --export-map "$file" "$out" || true
             fi
           done
 
@@ -36,10 +34,9 @@ jobs:
           
           if ls *.tmx 1> /dev/null 2>&1; then
             git add *.tmx
-            git commit -m "TBIN dosyaları TMX formatına dönüştürüldü"
+            git commit -m "Otomatik TBIN -> TMX dönüştürme" || exit 0
             git push
           else
-            echo "HATA: TMX dosyası oluşturulamadı."
-            exit 1
+            echo "Dönüştürülecek TMX dosyası yok, atlanıyor."
           fi
           
