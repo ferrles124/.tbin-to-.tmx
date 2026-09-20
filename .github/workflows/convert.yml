@@ -14,17 +14,18 @@ jobs:
       - name: Repoyu klonla
         uses: actions/checkout@v4
 
-      - name: Mono ve Tiled Kur
+      - name: Tiled ve Headless Sanal Ekran Paketlerini Kur
         run: |
           sudo apt-get update
-          sudo apt-get install -y mono-complete tiled
+          sudo apt-get install -y tiled xvfb libgl1-mesa-dri libgl1-mesa-glx
 
-      - name: Dönüştürme Betiğini Çalıştır
+      - name: Tiled ile TBIN -> TMX Dönüştürme
         run: |
           for file in *.tbin; do
             if [ -f "$file" ]; then
-              echo "Dönüştürülüyor: $file"
-              tiled --export-map "$file" "${file%.tbin}.tmx" || echo "Tiled CLI ile dönüştürülemedi, alternatif deneniyor..."
+              out="${file%.tbin}.tmx"
+              echo "Dönüştürülüyor: $file -> $out"
+              xvfb-run -a tiled --export-map "$file" "$out" || echo "Export hatası aldı ama kontrol ediliyor..."
             fi
           done
 
@@ -33,13 +34,12 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Eğer tmx dosyası oluştuysa git'e ekle
           if ls *.tmx 1> /dev/null 2>&1; then
             git add *.tmx
             git commit -m "TBIN dosyaları TMX formatına dönüştürüldü"
             git push
           else
-            echo "HATA: Dönüştürülen TMX dosyası bulunamadı."
+            echo "HATA: TMX dosyası oluşturulamadı."
             exit 1
           fi
           
